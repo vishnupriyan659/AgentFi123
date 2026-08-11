@@ -1,4 +1,4 @@
 // Serverless entry point for Vercel deployment
-import app from "../backend/dist/app.js";
+import app from "../backend/src/app.js";
 
 export default app;
