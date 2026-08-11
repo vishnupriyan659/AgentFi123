@@ -82,7 +82,7 @@ router.post("/validate", (req: Request, res: Response) => {
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      const issues = err.issues || err.errors || [];
+      const issues = err.issues || [];
       const msg = issues[0]?.message || "Invalid transfer validation payload.";
       return res.status(400).json({ error: msg });
     }
