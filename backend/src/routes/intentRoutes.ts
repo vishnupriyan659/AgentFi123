@@ -5,13 +5,79 @@ import { agentEngine } from "../agents/agentEngine.js";
 import { getAIProvider } from "../ai/index.js";
 import { tokenRegistry } from "../services/tokenRegistry.js";
 import { prisma } from "../prisma.js";
+import { PublicKey } from "@solana/web3.js";
+import { z } from "zod";
 
 const router = Router();
 const aiProvider = getAIProvider();
 
+export const transferIntentSchema = z.object({
+  action: z.literal("send"),
+  token: z.literal("SOL"),
+  network: z.literal("devnet"),
+  amount: z.number().positive().max(0.05),
+  recipient: z.string().refine((val) => {
+    try {
+      const pk = new PublicKey(val);
+      return PublicKey.isOnCurve(pk.toBuffer());
+    } catch {
+      return false;
+    }
+  }, { message: "Recipient must be a valid on-curve Solana public key." }),
+  sender: z.string().refine((val) => {
+    try {
+      new PublicKey(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: "Sender must be a valid Solana public key." }),
+}).refine((data) => data.recipient !== data.sender, {
+  message: "Self-transfer is not permitted.",
+  path: ["recipient"]
+});
+
 router.post("/", async (req: Request, res: Response) => {
-  const { intent, wallet } = req.body;
+  const { intent, wallet, parsedTransfer } = req.body;
   try {
+    // If explicit native SOL transfer payload provided, validate with Zod
+    if (parsedTransfer) {
+      const validated = transferIntentSchema.parse(parsedTransfer);
+      
+      await agentEngine.updateAgent("risk", { status: "completed", message: "Devnet Transfer Validation Passed", progress: 100, confidence: 100 });
+
+      const user = await prisma.user.upsert({
+        where: { wallet: wallet || 'demo-wallet' },
+        update: {},
+        create: { wallet: wallet || 'demo-wallet', nonce: Math.random().toString() }
+      });
+
+      const result = await prisma.intent.create({
+        data: {
+          userId: user.id,
+          action: "send",
+          source: JSON.stringify({ token: "SOL", amount: validated.amount }),
+          target: JSON.stringify({ recipient: validated.recipient }),
+          status: "validated"
+        }
+      });
+
+      return res.json({
+        id: result.id,
+        action: "send",
+        source: { token: "SOL", amount: validated.amount },
+        target: { recipient: validated.recipient },
+        status: "validated",
+        validatedProposal: {
+          action: "send",
+          token: "SOL",
+          amount: validated.amount,
+          recipient: validated.recipient,
+          network: "devnet"
+        }
+      });
+    }
+
     const parsed = await aiProvider.parseIntent(intent);
     
     // Check risk using the risk agent (mocked risk check)
@@ -50,7 +116,7 @@ router.post("/", async (req: Request, res: Response) => {
       target: result.target ? JSON.parse(result.target) : null
     });
   } catch (e: any) {
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: e.message || "Invalid transfer intent payload." });
   }
 });
 

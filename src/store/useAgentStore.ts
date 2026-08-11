@@ -78,10 +78,10 @@ const getInitialDemoSession = (): DemoSession | null => {
 
 export const useAgentStore = create<AgentStore>((set, get) => ({
   connectionStatus: getInitialDemoSession() ? "demo" : "connecting",
-  activeAgents: 4,
+  activeAgents: 0,
   tasksRunning: 0,
-  successRate: 99.8,
-  systemLoad: 15,
+  successRate: 0,
+  systemLoad: 0,
   lastSyncTime: Date.now(),
   agents: { ...initialAgents },
   activityHistory: [],

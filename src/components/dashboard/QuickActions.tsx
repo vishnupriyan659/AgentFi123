@@ -2,9 +2,9 @@ import { Zap, ArrowRight, TrendingUp, ShieldAlert } from "lucide-react";
 
 export function QuickActions() {
   const actions = [
-    { title: "Stake Idle SOL", icon: TrendingUp, impact: "+7.4% APY", color: "text-success", bg: "bg-success/10", border: "border-success/20" },
-    { title: "Rebalance Portfolio", icon: ShieldAlert, impact: "-12% Volatility", color: "text-warning", bg: "bg-warning/10", border: "border-warning/20" },
-    { title: "Supply USDC", icon: Zap, impact: "+8.4% APY", color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" }
+    { title: "Stake Devnet SOL", icon: TrendingUp, impact: "Devnet Yield", color: "text-success", bg: "bg-success/10", border: "border-success/20" },
+    { title: "Optimize Strategy", icon: ShieldAlert, impact: "Risk Analysis", color: "text-warning", bg: "bg-warning/10", border: "border-warning/20" },
+    { title: "Scan Liquidity", icon: Zap, impact: "Live Signals", color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" }
   ];
 
   return (

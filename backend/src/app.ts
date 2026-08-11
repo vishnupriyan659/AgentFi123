@@ -9,10 +9,12 @@ import crypto from "crypto";
 import agentRoutes from "./routes/agentRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import intentRoutes from "./routes/intentRoutes.js";
+import transferRoutes from "./routes/transferRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import demoRoutes from "./routes/demoRoutes.js";
 import copilotRoutes from "./routes/copilotRoutes.js";
+import marketRoutes from "./routes/marketRoutes.js";
 
 dotenv.config();
 
@@ -88,10 +90,12 @@ app.use(morgan("dev"));
 app.use("/api/agents", agentRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/intents", transactionLimiter, intentRoutes);
+app.use("/api/transfers", transactionLimiter, transferRoutes);
 app.use("/api/transactions", transactionLimiter, transactionRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/demo", transactionLimiter, demoRoutes);
 app.use("/api/copilot", generalApiLimiter, copilotRoutes);
+app.use("/api/market", generalApiLimiter, marketRoutes);
 
 // Root Endpoints
 app.get("/", (_req: Request, res: Response) => {

@@ -41,6 +41,20 @@ export const agentApi = {
 
   getIntentStatus: (intentId: string) => fetchWithTimeout(`${API_BASE_URL}/intents/${intentId}`),
   
+  validateTransfer: (payload: {
+    rawIntent: string;
+    action: string;
+    token: string;
+    network: string;
+    sender: string;
+    recipient: string;
+    amount: string;
+  }) => fetchWithTimeout(`${API_BASE_URL}/transfers/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }),
+
   simulateIntent: (intentId: string, payload: any) => 
     fetchWithTimeout(`${API_BASE_URL}/intents/${intentId}/simulate`, { 
       method: "POST",

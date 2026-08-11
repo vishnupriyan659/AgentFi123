@@ -2,7 +2,7 @@ import { Zap, TrendingUp, ShieldCheck, Clock, Target, Rocket } from "lucide-reac
 
 export function AIValueGenerated() {
   const metrics = [
-    { label: "Yield Improvement", value: "+7.4%", icon: TrendingUp, color: "text-success" },
+    { label: "Yield Improvement", value: "Active", icon: TrendingUp, color: "text-success" },
     { label: "Risk Reduction", value: "-18%", icon: ShieldCheck, color: "text-warning" },
     { label: "Transactions Optimized", value: "42", icon: Zap, color: "text-primary" },
     { label: "Strategies Executed", value: "15", icon: Rocket, color: "text-foreground" },

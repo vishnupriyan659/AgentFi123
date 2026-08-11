@@ -37,6 +37,9 @@ export function PortfolioRiskEngine() {
       <h3 className="font-display font-bold flex items-center gap-2 mb-6 text-foreground/90">
         <ShieldAlert className="w-5 h-5 text-primary" />
         Portfolio Risk Engine
+        <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] px-2 py-0.5 rounded font-mono font-semibold">
+          Heuristic Assessment
+        </span>
       </h3>
 
       <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4 mb-6">

@@ -20,14 +20,7 @@ export const SimulationCard = ({ intent }: Props) => {
     setOutPrice(simulation.outPriceSol);
   }, [simulation.outPriceSol]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setTick((t) => t + 1);
-      setSolPrice((p) => +(p + (Math.random() - 0.5) * 0.35).toFixed(2));
-      setOutPrice((p) => +(p * (1 + (Math.random() - 0.5) * 0.004)).toFixed(12));
-    }, 2200);
-    return () => clearInterval(id);
-  }, []);
+  // SimulationCard displays static preview derived from parsed intent without Math.random jitter
 
   const out = Math.max(
     0,

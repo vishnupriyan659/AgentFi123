@@ -50,9 +50,9 @@ JWT_SECRET=your_super_secret_jwt_key
 DATABASE_URL="file:./dev.db" # Or your postgres URL
 
 # Solana settings
-SOLANA_NETWORK=mainnet-beta
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-SOLANA_RPC_FALLBACK_URL=https://solana-api.projectserum.com
+SOLANA_NETWORK=devnet
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com
 
 # AI Settings (Optional - falls back to deterministic mock if omitted)
 OPENAI_API_KEY=your_openai_api_key

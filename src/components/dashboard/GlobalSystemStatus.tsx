@@ -41,6 +41,20 @@ export function GlobalSystemStatus() {
     }
   };
 
+  const completedCount = store.activityHistory.filter(a => a.status === "success").length;
+  const errorCount = store.activityHistory.filter(a => a.status === "error").length;
+  const totalFinished = completedCount + errorCount;
+  
+  const successRateText = totalFinished > 0 
+    ? `${((completedCount / totalFinished) * 100).toFixed(1)}%` 
+    : "N/A";
+
+  const networkLoadText = store.connectionStatus === "connected" && store.systemLoad > 0
+    ? `${store.systemLoad.toFixed(0)}%`
+    : "N/A";
+
+  const activeAgentsCount = Object.values(store.agents).filter(a => a.status !== "idle").length;
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -60,10 +74,10 @@ export function GlobalSystemStatus() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:items-center gap-6 w-full lg:w-auto">
-        <MetricItem icon={Network} label="Network Load" value={store.systemLoad.toFixed(0)} unit="%" />
-        <MetricItem icon={Server} label="Active Agents" value={store.activeAgents} />
+        <MetricItem icon={Network} label="Network Load" value={networkLoadText} />
+        <MetricItem icon={Server} label="Active Agents" value={activeAgentsCount} />
         <MetricItem icon={Activity} label="Tasks Running" value={store.tasksRunning} />
-        <MetricItem icon={ShieldCheck} label="Success Rate" value={store.successRate.toFixed(1)} unit="%" highlight />
+        <MetricItem icon={ShieldCheck} label="Success Rate" value={successRateText} highlight={successRateText !== "N/A"} />
       </div>
     </motion.div>
   );

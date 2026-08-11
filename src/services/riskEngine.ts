@@ -1,52 +1,122 @@
-import { DemoPortfolio, demoPortfolio } from "./demoPortfolio";
+import type { AgentFiLiveSnapshot } from "./liveSnapshotService";
 
-export interface RiskProfile {
-  concentrationRisk: number; // 0-100
-  volatilityRisk: number;
-  liquidityRisk: number;
-  protocolRisk: number;
-  counterpartyRisk: number;
-  overallRiskScore: number;
-  riskLevel: "Low" | "Medium" | "High";
+export interface LiveRiskBreakdown {
+  concentrationScore: number; // 0-30
+  volatilityScore: number;    // 0-25
+  diversificationScore: number;// 0-20
+  feeReserveScore: number;    // 0-15
+  failedTxScore: number;       // 0-10
+  totalRiskScore: number;      // 0-100
+  riskCategory: "Low Risk" | "Moderate Risk" | "Elevated Risk" | "Not Calculated";
+  formulaExplanation: string;
+  hasEnoughData: boolean;
+  calculatedAt: string;
 }
 
-export class RiskEngine {
-  analyzeRisk(portfolio?: DemoPortfolio): RiskProfile {
-    const pf = portfolio || demoPortfolio.getPortfolio();
-    
-    // Simulate complex risk analysis based on portfolio
-    const solExposure = pf.assets.find(a => a.symbol === "SOL")?.allocationPct || 0;
-    const memeExposure = pf.assets.filter(a => a.category === "meme").reduce((acc, val) => acc + val.allocationPct, 0);
-    const stableExposure = pf.assets.filter(a => a.category === "stable").reduce((acc, val) => acc + val.allocationPct, 0);
-
-    const concentrationRisk = Math.min(100, solExposure * 1.2);
-    const volatilityRisk = Math.min(100, 30 + memeExposure * 2 + (100 - stableExposure) * 0.4);
-    const liquidityRisk = Math.max(0, 100 - stableExposure * 3);
-    const protocolRisk = 25; // Base defi risk
-    const counterpartyRisk = 15; // Low on-chain counterparty
-
-    const overallRiskScore = Math.round(
-      (concentrationRisk * 0.4) + 
-      (volatilityRisk * 0.3) + 
-      (liquidityRisk * 0.1) + 
-      (protocolRisk * 0.1) + 
-      (counterpartyRisk * 0.1)
-    );
-
-    let riskLevel: "Low" | "Medium" | "High" = "Medium";
-    if (overallRiskScore < 40) riskLevel = "Low";
-    if (overallRiskScore > 75) riskLevel = "High";
-
+/**
+ * Deterministically calculates wallet risk score from live snapshot data.
+ * Obey Fix 19D rules:
+ * - If disconnected: return hasEnoughData = false ("Connect Phantom to load live wallet data").
+ * - If 0 SOL: return hasEnoughData = false ("Not enough holdings data").
+ * - Only calculate concentration when solBalance > 0.
+ */
+export function calculateLiveRiskProfile(snapshot: AgentFiLiveSnapshot | null): LiveRiskBreakdown {
+  if (!snapshot || !snapshot.wallet.connected || !snapshot.wallet.publicKey) {
     return {
-      concentrationRisk,
-      volatilityRisk,
-      liquidityRisk,
-      protocolRisk,
-      counterpartyRisk,
-      overallRiskScore,
-      riskLevel
+      concentrationScore: 0,
+      volatilityScore: 0,
+      diversificationScore: 0,
+      feeReserveScore: 0,
+      failedTxScore: 0,
+      totalRiskScore: 0,
+      riskCategory: "Not Calculated",
+      formulaExplanation: "Connect Phantom to load live wallet data.",
+      hasEnoughData: false,
+      calculatedAt: new Date().toISOString(),
     };
   }
-}
 
-export const riskEngine = new RiskEngine();
+  const { solBalance, balanceStatus, tokenAccounts, recentTransactions } = snapshot.wallet;
+  const { realizedVolatility } = snapshot.market;
+
+  if (solBalance === null || balanceStatus === "unavailable" || balanceStatus === "loading") {
+    return {
+      concentrationScore: 0,
+      volatilityScore: 0,
+      diversificationScore: 0,
+      feeReserveScore: 0,
+      failedTxScore: 0,
+      totalRiskScore: 0,
+      riskCategory: "Not Calculated",
+      formulaExplanation: "Wallet data loading or unavailable from RPC.",
+      hasEnoughData: false,
+      calculatedAt: new Date().toISOString(),
+    };
+  }
+
+  if (solBalance === 0 || balanceStatus === "zero") {
+    return {
+      concentrationScore: 0,
+      volatilityScore: 0,
+      diversificationScore: 0,
+      feeReserveScore: 15, // Low fee reserve
+      failedTxScore: 0,
+      totalRiskScore: 15,
+      riskCategory: "Not Calculated",
+      formulaExplanation: "Not enough holdings data (0.0000 SOL balance). Obtain Devnet test funds.",
+      hasEnoughData: false,
+      calculatedAt: new Date().toISOString(),
+    };
+  }
+
+  // 1. Concentration Score (0-30 points) - Only computed when solBalance > 0
+  const totalAssetsCount = 1 + (tokenAccounts ? tokenAccounts.length : 0);
+  const concentrationScore = totalAssetsCount === 1 ? 30 : Math.max(0, 30 - tokenAccounts.length * 5);
+
+  // 2. Market Volatility Score (0-25 points)
+  const vol = realizedVolatility ?? 0;
+  const volatilityScore = Math.min(25, Math.round(vol * 2.5));
+
+  // 3. Diversification Score (0-20 points)
+  const diversificationScore = totalAssetsCount === 1 ? 20 : Math.max(0, 20 - tokenAccounts.length * 4);
+
+  // 4. Fee Reserve Score (0-15 points)
+  let feeReserveScore = 0;
+  if (solBalance < 0.005) {
+    feeReserveScore = 15;
+  } else if (solBalance < 0.02) {
+    feeReserveScore = 10;
+  } else if (solBalance < 0.05) {
+    feeReserveScore = 5;
+  } else {
+    feeReserveScore = 0;
+  }
+
+  // 5. Failed Transaction Score (0-10 points)
+  const failedTxsCount = recentTransactions.filter((t) => t.status === "failed").length;
+  const failedTxScore = Math.min(10, failedTxsCount * 5);
+
+  const totalRiskScore = Math.min(
+    100,
+    concentrationScore + volatilityScore + diversificationScore + feeReserveScore + failedTxScore
+  );
+
+  let riskCategory: "Low Risk" | "Moderate Risk" | "Elevated Risk" = "Low Risk";
+  if (totalRiskScore >= 60) riskCategory = "Elevated Risk";
+  else if (totalRiskScore >= 30) riskCategory = "Moderate Risk";
+
+  const formulaExplanation = `Calculated score (${totalRiskScore}/100) = Concentration (${concentrationScore}/30) + Volatility (${volatilityScore}/25) + Diversification (${diversificationScore}/20) + Fee Reserve (${feeReserveScore}/15) + Failed Txs (${failedTxScore}/10).`;
+
+  return {
+    concentrationScore,
+    volatilityScore,
+    diversificationScore,
+    feeReserveScore,
+    failedTxScore,
+    totalRiskScore,
+    riskCategory,
+    formulaExplanation,
+    hasEnoughData: true,
+    calculatedAt: new Date().toISOString(),
+  };
+}

@@ -1,27 +1,39 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Activity, Clock, PieChart, Coins } from "lucide-react";
+import { demoPortfolio } from "@/services/demoPortfolio";
+import { useSolBalance } from "@/hooks/useSolBalance";
 
 export function WalletIntelligence() {
   const { publicKey } = useWallet();
+  const { balance } = useSolBalance();
+  const pf = demoPortfolio.getPortfolio();
 
-  // If not connected, we don't show real intelligence. We show a demo layout if we want, or hide.
-  // The user requested to show demo data if data is unavailable or not connected.
   const isConnected = !!publicKey;
 
   const stats = [
-    { label: "Wallet Age", value: isConnected ? "142 Days" : "412 Days", icon: Clock },
-    { label: "Tx Count", value: isConnected ? "1,204" : "84", icon: Activity },
-    { label: "Portfolio", value: isConnected ? "$4,321" : "$12,450", icon: PieChart },
-    { label: "Protocols", value: isConnected ? "12" : "3", icon: Coins },
+    { label: "Wallet Age", value: isConnected ? "142 Days" : `${pf.walletAgeDays} Days`, icon: Clock },
+    { label: "Tx Count", value: isConnected ? "1,204" : pf.totalTransactions.toLocaleString(), icon: Activity },
+    { 
+      label: "Portfolio", 
+      value: isConnected 
+        ? (balance !== null ? `${balance.toFixed(4)} SOL` : "Loading wallet balance...")
+        : `$${pf.totalValueUsd.toLocaleString()}`, 
+      icon: PieChart 
+    },
+    { label: "Protocols", value: isConnected ? "12" : `${pf.assets.length}`, icon: Coins },
   ];
 
   return (
     <div className="glass-panel border border-border/40 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-display font-bold">Wallet Intelligence</h3>
-        {!isConnected && (
-          <span className="text-[10px] uppercase tracking-wider text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20 whitespace-nowrap">
-            Demo Mode
+        {isConnected ? (
+          <span className="text-[10px] font-mono text-teal bg-teal/10 px-2 py-0.5 rounded border border-teal/20 whitespace-nowrap font-semibold">
+            LIVE Devnet
+          </span>
+        ) : (
+          <span className="text-[10px] uppercase tracking-wider font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap font-semibold">
+            Demo Data
           </span>
         )}
       </div>

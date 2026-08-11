@@ -73,6 +73,9 @@ export function AgentCard({ agent }: { agent: AgentState }) {
               <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">
                 {agent.status}
               </span>
+              <span className="text-[8px] font-mono text-amber-400/90 bg-amber-400/10 border border-amber-400/20 px-1 py-0.2 rounded shrink-0">
+                Simulated
+              </span>
             </div>
           </div>
           

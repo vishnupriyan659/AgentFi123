@@ -1,76 +1,161 @@
-import { DemoPortfolio, demoPortfolio } from "./demoPortfolio";
-import { riskEngine } from "./riskEngine";
+import type { AgentFiLiveSnapshot } from "./liveSnapshotService";
 
-export interface Recommendation {
+export interface LiveRecommendation {
   id: string;
-  type: string;
+  category: "Fee Reserve" | "Portfolio Concentration" | "Activity Inspection" | "Protocol Reference";
   title: string;
-  confidence: number;
-  expectedImpact: string;
-  riskLevel: "Low" | "Medium" | "High";
-  reasoning: string;
-  observedData: string;
-  analysis: string;
-  expectedOutcome: string;
+  triggerCondition: string;
+  evidence: string;
+  source: string;
+  timestamp: string;
+  network: "Solana Devnet";
+  isExecutable: boolean;
+  actionType: "TRANSFER_AGENT" | "VIEW_ANALYSIS" | "NONE";
   actionText: string;
+  limitations: string;
+  disclaimer: "Educational observation only — not financial advice.";
 }
 
-export class RecommendationEngine {
-  generateRecommendations(portfolio?: DemoPortfolio): Recommendation[] {
-    const pf = portfolio || demoPortfolio.getPortfolio();
-    const risk = riskEngine.analyzeRisk(pf);
+/**
+ * Generates transparent, rule-based recommendations from the live snapshot.
+ */
+export function generateLiveRecommendations(snapshot: AgentFiLiveSnapshot | null): LiveRecommendation[] {
+  const nowIso = new Date().toISOString();
 
-    const recs: Recommendation[] = [];
-
-    const solAsset = pf.assets.find(a => a.symbol === "SOL");
-    if (solAsset && solAsset.allocationPct > 50 && !solAsset.isStaked) {
-      recs.push({
-        id: "rec_stake_sol",
-        type: "Yield Optimization",
-        title: "Stake Idle SOL",
-        confidence: 94,
-        expectedImpact: "+7.4% APY",
-        riskLevel: "Low",
-        reasoning: "Idle assets detected. Staking SOL natively or via LSTs generates risk-free base yield.",
-        observedData: `${solAsset.balance.toFixed(2)} unstaked SOL in wallet.`,
-        analysis: "Portfolio is missing out on base network yield. Delegating to a validator or LST like JTO/mSOL is optimal.",
-        expectedOutcome: "Immediate yield generation starting next epoch.",
-        actionText: "Stake 50% SOL"
-      });
-    }
-
-    if (risk.concentrationRisk > 70) {
-      recs.push({
-        id: "rec_rebalance",
-        type: "Risk Management",
-        title: "Rebalance Portfolio",
-        confidence: 89,
-        expectedImpact: "-12% Volatility",
-        riskLevel: "Low",
-        reasoning: "Portfolio lacks diversification. High concentration in single assets increases drawdown risk.",
-        observedData: `72% concentration in Major assets (SOL).`,
-        analysis: "Reducing SOL exposure by 10% into stables limits downside while maintaining upside exposure.",
-        expectedOutcome: "More resilient portfolio during market corrections.",
-        actionText: "Convert 10% SOL to USDC"
-      });
-    }
-
-    recs.push({
-      id: "rec_kamino",
-      type: "Opportunity",
-      title: "Supply USDC to Kamino",
-      confidence: 88,
-      expectedImpact: "+8.4% APY",
-      riskLevel: "Medium",
-      reasoning: "Stablecoin yields are elevated due to borrowing demand.",
-      observedData: "4,500 USDC sitting idle.",
-      analysis: "Kamino Finance currently offers 8.4% on USDC supply with low smart contract risk.",
-      expectedOutcome: "Passive stablecoin yield.",
-      actionText: "Supply USDC"
-    });
-
-    return recs;
+  if (!snapshot || !snapshot.wallet.connected || !snapshot.wallet.publicKey) {
+    return [
+      {
+        id: "rec_connect_wallet",
+        category: "Fee Reserve",
+        title: "Connect Phantom Wallet to Evaluate RPC State",
+        triggerCondition: "No wallet connected",
+        evidence: "Phantom extension disconnected",
+        source: "Solana Devnet RPC",
+        timestamp: nowIso,
+        network: "Solana Devnet",
+        isExecutable: false,
+        actionType: "NONE",
+        actionText: "Connect Phantom Wallet",
+        limitations: "Requires active Phantom browser extension.",
+        disclaimer: "Educational observation only — not financial advice.",
+      },
+    ];
   }
-}
 
-export const recommendationEngine = new RecommendationEngine();
+  const { solBalance, balanceStatus, recentTransactions, tokenAccounts } = snapshot.wallet;
+  const { solUsdPrice, change24hPercent } = snapshot.market;
+
+  if (solBalance === 0 || balanceStatus === "zero") {
+    return [
+      {
+        id: "rec_obtain_test_sol",
+        category: "Fee Reserve",
+        title: "Obtain Devnet SOL Test Funds",
+        triggerCondition: "Wallet connected with exactly 0.0000 SOL",
+        evidence: "Balance: 0.0000 SOL (LIVE)",
+        source: "Solana Devnet RPC",
+        timestamp: nowIso,
+        network: "Solana Devnet",
+        isExecutable: true,
+        actionType: "TRANSFER_AGENT",
+        actionText: "Request Devnet SOL / Prepare Transfer",
+        limitations: "Devnet test funds have no real monetary value.",
+        disclaimer: "Educational observation only — not financial advice.",
+      },
+      {
+        id: "rec_protocol_ref",
+        category: "Protocol Reference",
+        title: "Review Verified Live Protocol Market References",
+        triggerCondition: "Educational market monitoring",
+        evidence: `Live SOL/USD spot price: ${solUsdPrice !== null && solUsdPrice !== undefined ? `$${solUsdPrice.toFixed(2)}` : "N/A"} (${change24hPercent !== null && change24hPercent !== undefined ? `${change24hPercent.toFixed(2)}%` : "0%"})`,
+        source: "CoinGecko Market API",
+        timestamp: nowIso,
+        network: "Solana Devnet",
+        isExecutable: false,
+        actionType: "VIEW_ANALYSIS",
+        actionText: "Execution not implemented on Solana Devnet",
+        limitations: "Mainnet yield protocols are not executable from Solana Devnet.",
+        disclaimer: "Educational observation only — not financial advice.",
+      },
+    ];
+  }
+
+  const recs: LiveRecommendation[] = [];
+
+  // Rule 1: Check SOL Fee Reserve (Funded Wallet)
+  if (solBalance !== null && solBalance < 0.05) {
+    recs.push({
+      id: "rec_fee_reserve",
+      category: "Fee Reserve",
+      title: "Maintain SOL Fee Reserve",
+      triggerCondition: "Devnet SOL balance is below 0.05 SOL",
+      evidence: `Current balance is ${solBalance.toFixed(4)} SOL.`,
+      source: "Solana Devnet RPC",
+      timestamp: nowIso,
+      network: "Solana Devnet",
+      isExecutable: true,
+      actionType: "TRANSFER_AGENT",
+      actionText: "Prepare Supported Transfer",
+      limitations: "Devnet SOL test funds only; maximum transfer cap is 0.05 SOL.",
+      disclaimer: "Educational observation only — not financial advice.",
+    });
+  }
+
+  // Rule 2: Check Asset Concentration (Only when solBalance > 0)
+  if (solBalance !== null && solBalance > 0 && tokenAccounts.length === 0) {
+    recs.push({
+      id: "rec_concentration",
+      category: "Portfolio Concentration",
+      title: "Review Single-Asset Wallet Concentration",
+      triggerCondition: "Wallet holds 100% of holdings in SOL",
+      evidence: `100% of visible holdings are native SOL (${solBalance.toFixed(4)} SOL).`,
+      source: "Solana Devnet RPC",
+      timestamp: nowIso,
+      network: "Solana Devnet",
+      isExecutable: false,
+      actionType: "VIEW_ANALYSIS",
+      actionText: "Execution not implemented on Solana Devnet",
+      limitations: "Swaps and token minting are disabled on Devnet.",
+      disclaimer: "Educational observation only — not financial advice.",
+    });
+  }
+
+  // Rule 3: Check Failed Recent Transactions
+  const failedTxs = recentTransactions.filter((t) => t.status === "failed");
+  if (failedTxs.length > 0) {
+    recs.push({
+      id: "rec_failed_tx",
+      category: "Activity Inspection",
+      title: "Inspect Failed Recent Transaction Signatures",
+      triggerCondition: `${failedTxs.length} failed transaction(s) found in recent history`,
+      evidence: `Latest failed signature: ${failedTxs[0].signature.slice(0, 10)}…`,
+      source: "Solana Devnet RPC",
+      timestamp: nowIso,
+      network: "Solana Devnet",
+      isExecutable: false,
+      actionType: "VIEW_ANALYSIS",
+      actionText: "Open Transaction History",
+      limitations: "Devnet RPC signature query limit is 10 transactions.",
+      disclaimer: "Educational observation only — not financial advice.",
+    });
+  }
+
+  // Rule 4: Protocol Yield Reference
+  recs.push({
+    id: "rec_protocol_ref",
+    category: "Protocol Reference",
+    title: "Review Verified Live Protocol Market References",
+    triggerCondition: "Educational market monitoring",
+    evidence: `Live SOL/USD spot price: ${solUsdPrice !== null && solUsdPrice !== undefined ? `$${solUsdPrice.toFixed(2)}` : "N/A"} (${change24hPercent !== null && change24hPercent !== undefined ? `${change24hPercent.toFixed(2)}%` : "0%"})`,
+    source: "CoinGecko Market API",
+    timestamp: nowIso,
+    network: "Solana Devnet",
+    isExecutable: false,
+    actionType: "VIEW_ANALYSIS",
+    actionText: "Execution not implemented on Solana Devnet",
+    limitations: "Mainnet yield protocols are not executable from Solana Devnet.",
+    disclaimer: "Educational observation only — not financial advice.",
+  });
+
+  return recs;
+}

@@ -23,8 +23,9 @@ export class ExecutionService {
 
       const { swapTransaction } = await res.json();
       
-      // Deserialize the transaction
-      const swapTransactionBuf = Buffer.from(swapTransaction, "base64");
+      // Deserialize the transaction browser-natively
+      const binaryStr = atob(swapTransaction);
+      const swapTransactionBuf = Uint8Array.from(binaryStr, (c) => c.charCodeAt(0));
       return VersionedTransaction.deserialize(swapTransactionBuf);
     } catch (e) {
       console.error("ExecutionService error:", e);

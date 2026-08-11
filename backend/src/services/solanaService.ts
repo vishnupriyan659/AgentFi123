@@ -6,9 +6,9 @@ export class SolanaService {
   private network: string;
 
   constructor() {
-    this.network = process.env.SOLANA_NETWORK || "mainnet-beta";
-    const primaryUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
-    const fallbackUrl = process.env.SOLANA_RPC_FALLBACK_URL || "https://solana-api.projectserum.com";
+    this.network = process.env.SOLANA_NETWORK || "devnet";
+    const primaryUrl = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+    const fallbackUrl = process.env.SOLANA_RPC_FALLBACK_URL || "https://api.devnet.solana.com";
     this.rpcUrls = [primaryUrl, fallbackUrl];
   }
 

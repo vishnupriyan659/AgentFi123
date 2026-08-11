@@ -149,4 +149,62 @@
   }
 }
 
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .enterprise-print-report,
+  .enterprise-print-report * {
+    visibility: visible;
+  }
+
+  .enterprise-print-report {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  .print-section,
+  .print-card,
+  table,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+
 

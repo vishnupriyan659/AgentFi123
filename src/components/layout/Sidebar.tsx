@@ -16,14 +16,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Hexagon,
+  Compass,
+  FileText,
+  Sparkles,
+  Users,
+  Target,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useState } from "react";
+
+import { useAgentStore } from "@/store/useAgentStore";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
-  badge?: string;
+  getBadge?: (store: ReturnType<typeof useAgentStore.getState>) => string;
 }
 
 const mainNavItems: NavItem[] = [
@@ -33,15 +41,13 @@ const mainNavItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    title: "Agents",
+    title: "Transfer Agent",
     href: "/agents",
     icon: Bot,
-    badge: "Active",
-  },
-  {
-    title: "Intelligence",
-    href: "/intelligence",
-    icon: BrainCircuit,
+    getBadge: (store) => {
+      if (store.connectionStatus === "offline" || store.connectionStatus === "error") return undefined;
+      return "READY";
+    },
   },
   {
     title: "Portfolio",
@@ -49,14 +55,52 @@ const mainNavItems: NavItem[] = [
     icon: Wallet,
   },
   {
-    title: "Simulation",
+    title: "Intelligence",
+    href: "/intelligence",
+    icon: BrainCircuit,
+  },
+  {
+    title: "Strategy Lab",
     href: "/simulation",
     icon: PlayCircle,
+  },
+  {
+    title: "Swap Lab",
+    href: "/swap-lab",
+    icon: ArrowRightLeft,
   },
   {
     title: "Market Radar",
     href: "/market-radar",
     icon: Activity,
+  },
+];
+
+const executiveNavItems: NavItem[] = [
+  {
+    title: "Executive Insights",
+    href: "/executive-insights",
+    icon: Compass,
+  },
+  {
+    title: "Enterprise Reports",
+    href: "/enterprise-reports",
+    icon: FileText,
+  },
+  {
+    title: "AI Copilot",
+    href: "/ai-copilot",
+    icon: Sparkles,
+  },
+  {
+    title: "Agent Debate",
+    href: "/agent-debate",
+    icon: Users,
+  },
+  {
+    title: "Recommendation Center",
+    href: "/recommendations",
+    icon: Target,
   },
 ];
 
@@ -76,6 +120,10 @@ const secondaryNavItems: NavItem[] = [
 export function Sidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const store = useAgentStore();
+
+  const isConnected = store.connectionStatus === "connected";
+  const isDemo = store.connectionStatus === "demo";
 
   return (
     <div
@@ -114,6 +162,51 @@ export function Sidebar() {
           )}
           {mainNavItems.map((item) => (
             <NavLink key={item.href} to={item.href}>
+              {({ isActive }) => {
+                const badgeText = item.getBadge ? item.getBadge(store) : undefined;
+                return (
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 h-11 smooth-transition rounded-xl",
+                      isActive 
+                        ? "bg-primary/15 text-primary hover:bg-primary/20 border border-primary/20 shadow-sm shadow-primary/5" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5",
+                      collapsed && "justify-center px-2"
+                    )}
+                  >
+                    <item.icon className={cn("h-5 w-5 shrink-0 transition-colors", isActive ? "text-primary" : "")} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left font-medium">{item.title}</span>
+                        {badgeText && (
+                          <Badge variant="outline" className={cn(
+                            "h-5 px-2 text-[10px] font-semibold border-primary/30 uppercase tracking-wider",
+                            badgeText === "ACTIVE" ? "bg-success/10 text-success border-success/30" : "bg-muted/10 text-muted-foreground border-border/40"
+                          )}>
+                            {badgeText}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                );
+              }}
+            </NavLink>
+          ))}
+        </nav>
+
+        <Separator className="my-6 opacity-50" />
+
+        {/* Executive Navigation */}
+        <nav className="flex flex-col gap-1.5">
+          {!collapsed && (
+            <div className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Executive
+            </div>
+          )}
+          {executiveNavItems.map((item) => (
+            <NavLink key={item.href} to={item.href}>
               {({ isActive }) => (
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
@@ -126,16 +219,7 @@ export function Sidebar() {
                   )}
                 >
                   <item.icon className={cn("h-5 w-5 shrink-0 transition-colors", isActive ? "text-primary" : "")} />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 text-left font-medium">{item.title}</span>
-                      {item.badge && (
-                        <Badge variant="outline" className="h-5 px-2 text-[10px] font-semibold border-primary/30 bg-primary/10 text-primary uppercase tracking-wider">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </>
-                  )}
+                  {!collapsed && <span className="flex-1 text-left font-medium">{item.title}</span>}
                 </Button>
               )}
             </NavLink>
@@ -144,7 +228,7 @@ export function Sidebar() {
 
         <Separator className="my-6 opacity-50" />
 
-        {/* Secondary Navigation */}
+        {/* System Settings Navigation */}
         <nav className="flex flex-col gap-1.5">
           {!collapsed && (
             <div className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -201,16 +285,19 @@ export function Sidebar() {
       <div className={cn("p-4 pt-0", collapsed && "px-3")}>
         <div
           className={cn(
-            "flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-3 py-2.5 backdrop-blur-sm",
+            "flex items-center gap-2 rounded-xl border px-3 py-2.5 backdrop-blur-sm",
+            isConnected ? "border-success/20 bg-success/10 text-success" : isDemo ? "border-warning/20 bg-warning/10 text-warning" : "border-destructive/20 bg-destructive/10 text-destructive",
             collapsed && "justify-center px-2"
           )}
         >
           <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+            {isConnected && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />}
+            <span className={cn("relative inline-flex h-2 w-2 rounded-full", isConnected ? "bg-success" : isDemo ? "bg-warning" : "bg-destructive")} />
           </span>
           {!collapsed && (
-            <span className="text-xs font-semibold text-success uppercase tracking-wider">System Online</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              {isConnected ? "Backend Connected" : isDemo ? "Demo Mode" : "Backend Offline"}
+            </span>
           )}
         </div>
       </div>

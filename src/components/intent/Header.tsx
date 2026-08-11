@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Wallet, Copy, LogOut, ChevronDown, Check, Loader2 } from "lucide-react";
 import { useSolBalance } from "@/hooks/useSolBalance";
+import { GetTestSolModal } from "@/components/common/GetTestSolModal";
 
 const truncate = (addr: string) => `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 
@@ -35,13 +36,16 @@ export const Header = () => {
       <div className="flex h-20 items-center justify-end gap-4 px-8">
         <div className="flex items-center gap-3">
           {/* Network badge */}
-          <div className="hidden items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-[11px] font-semibold text-success uppercase tracking-wider sm:inline-flex">
+          <div className="hidden items-center gap-2 rounded-full border border-warning/20 bg-warning/10 px-3 py-1.5 text-[11px] font-semibold text-warning uppercase tracking-wider sm:inline-flex">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-warning" />
             </span>
-            AgentFi Net
+            SOLANA DEVNET — TEST ONLY
           </div>
+
+          {/* Get Test SOL Button & Modal */}
+          <GetTestSolModal />
 
           {connected && publicKey ? (
             <DropdownMenu>

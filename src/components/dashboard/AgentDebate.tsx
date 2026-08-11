@@ -1,74 +1,130 @@
-import { motion } from "framer-motion";
-import { ShieldAlert, LineChart, TrendingUp, PieChart, CheckCircle2, User, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { ShieldAlert, LineChart, PieChart, CheckCircle2, User, RefreshCw, AlertCircle } from "lucide-react";
+import { useLiveSnapshot } from "@/hooks/useLiveSnapshot";
+import { Badge } from "@/components/ui/badge";
+
+interface AgentVote {
+  agent: string;
+  position: "support" | "caution" | "insufficient-data";
+  reasoning: string;
+  evidence: Array<{ metric: string; value: string; source: string }>;
+}
 
 export function AgentDebate() {
-  const debate = [
-    { agent: "Risk", icon: ShieldAlert, color: "text-warning", bg: "bg-warning/10", border: "border-warning/20", stance: "caution", message: "Potential exposure remains elevated. Recommend hedging downside risk." },
-    { agent: "Market", icon: LineChart, color: "text-success", bg: "bg-success/10", border: "border-success/20", stance: "approve", message: "Bullish market conditions strongly favor staking at current levels." },
-    { agent: "Yield", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20", stance: "approve", message: "Expected annual return 7.8%. Favorable relative to stablecoin baseline." },
-    { agent: "Portfolio", icon: PieChart, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20", stance: "approve", message: "Diversification remains acceptable post-execution." },
-  ];
+  const { snapshot, loading, refresh } = useLiveSnapshot();
+  const [debates, setDebates] = useState<AgentVote[]>([]);
+  const [consensusText, setConsensusText] = useState<string>("3 of 4 agents support this conclusion");
+  const [agreementPct, setAgreementPct] = useState<number>(75);
+  const [isDebating, setIsDebating] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!snapshot) return;
+
+    const solBalance = snapshot.wallet.solBalance ?? 0;
+    const solPriceUsd = snapshot.market.solUsdPrice ?? 180;
+    const change24h = snapshot.market.change24hPercent ?? 0;
+
+    const votes: AgentVote[] = [
+      {
+        agent: "Risk Agent",
+        position: solBalance < 0.05 ? "caution" : "support",
+        reasoning: `Wallet SOL balance is ${solBalance.toFixed(4)} SOL. Concentration in SOL is 100%.`,
+        evidence: [{ metric: "Devnet SOL Fee Reserve", value: `${solBalance.toFixed(4)} SOL`, source: "Solana Devnet RPC" }],
+      },
+      {
+        agent: "Market Agent",
+        position: change24h >= 0 ? "support" : "caution",
+        reasoning: `CoinGecko SOL spot price is $${solPriceUsd.toFixed(2)} USD (${change24h >= 0 ? "+" : ""}${change24h.toFixed(2)}%).`,
+        evidence: [{ metric: "SOL/USD Price", value: `$${solPriceUsd.toFixed(2)}`, source: "CoinGecko" }],
+      },
+      {
+        agent: "Portfolio Agent",
+        position: "support",
+        reasoning: "Connected Phantom wallet is active on Solana Devnet.",
+        evidence: [{ metric: "Connection Status", value: snapshot.wallet.connected ? "Connected" : "Disconnected", source: "Solana Devnet RPC" }],
+      },
+      {
+        agent: "Protocol Agent",
+        position: "insufficient-data",
+        reasoning: "Mainnet yield protocols (Kamino/Orca) are disabled on Solana Devnet.",
+        evidence: [{ metric: "Devnet Protocol Support", value: "Disabled", source: "AgentFi Rules" }],
+      },
+    ];
+
+    const supportCount = votes.filter((v) => v.position === "support").length;
+    setDebates(votes);
+    setConsensusText(`${supportCount} of 4 agents support this conclusion`);
+    setAgreementPct(Math.round((supportCount / 4) * 100));
+  }, [snapshot]);
+
+  const handleRunDebate = async () => {
+    setIsDebating(true);
+    await refresh();
+    setIsDebating(false);
+  };
+
+  const getStanceColor = (stance: string) => {
+    if (stance === "support") return "text-success bg-success/10 border-success/20";
+    if (stance === "caution") return "text-warning bg-warning/10 border-warning/20";
+    return "text-muted-foreground bg-white/10 border-white/10";
+  };
 
   return (
-    <div className="glass-panel border border-border/40 rounded-2xl p-6 h-full flex flex-col relative overflow-hidden">
-      <div className="flex items-center justify-between mb-6 relative z-10">
-        <h3 className="font-display font-bold flex items-center gap-2">
+    <div className="glass-panel border border-white/10 rounded-2xl p-6 h-full flex flex-col relative overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display font-bold flex items-center gap-2 text-base">
           <User className="w-5 h-5 text-primary" />
           Agent Debate Engine
         </h3>
-        <div className="flex items-center gap-2 text-xs font-mono bg-white/5 px-3 py-1 rounded-full border border-white/10">
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse" /> Live Session
-        </div>
+        <Badge variant="outline" className="border-teal/30 bg-teal/10 text-teal text-[10px] uppercase font-mono font-bold">
+          RULE-BASED MULTI-AGENT ANALYSIS
+        </Badge>
       </div>
 
-      <div className="bg-background/80 border border-white/10 rounded-xl p-4 mb-6 relative z-10 flex gap-3 items-center">
-        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-          <HelpCircle className="w-5 h-5 text-muted-foreground" />
-        </div>
+      <div className="bg-black/40 border border-white/10 rounded-xl p-3 mb-4 flex justify-between items-center text-xs font-mono">
         <div>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">Scenario Evaluation</span>
-          <h4 className="font-bold text-sm">Should the user stake 50% of idle SOL?</h4>
+          <span className="text-muted-foreground uppercase text-[10px] block">Debate Topic</span>
+          <span className="font-bold text-foreground">Evaluate Wallet Devnet State & Market Stability</span>
         </div>
+        <button
+          onClick={handleRunDebate}
+          disabled={loading || isDebating}
+          className="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary flex items-center gap-1.5 text-xs font-mono font-semibold"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading || isDebating ? "animate-spin" : ""}`} />
+          Run Session
+        </button>
       </div>
 
-      <div className="flex-1 space-y-4 relative z-10 overflow-y-auto no-scrollbar pr-2">
-        {debate.map((d, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.4 }}
-            className="flex gap-4"
-          >
-            <div className="flex flex-col items-center">
-              <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", d.bg, d.border, d.color)}>
-                <d.icon className="w-4 h-4" />
+      <div className="flex-1 space-y-3 font-mono text-xs overflow-y-auto no-scrollbar">
+        {debates.map((d, i) => (
+          <div key={i} className="p-3.5 rounded-xl border border-white/5 bg-white/5 space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-foreground">{d.agent}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded uppercase border font-bold ${getStanceColor(d.position)}`}>
+                {d.position}
+              </span>
+            </div>
+            <p className="text-muted-foreground text-xs">{d.reasoning}</p>
+            {d.evidence.map((ev, idx) => (
+              <div key={idx} className="text-[10px] text-teal flex justify-between pt-1 border-t border-white/5">
+                <span>{ev.metric}: <strong>{ev.value}</strong></span>
+                <span className="text-muted-foreground">Source: {ev.source}</span>
               </div>
-              {i !== debate.length - 1 && <div className="w-px h-full bg-white/10 my-2" />}
-            </div>
-            <div className="pb-4 pt-1">
-              <span className={cn("text-xs uppercase tracking-wider font-bold mb-1 block", d.color)}>{d.agent} Agent</span>
-              <p className="text-sm text-foreground/90">{d.message}</p>
-            </div>
-          </motion.div>
+            ))}
+          </div>
         ))}
       </div>
 
-      <div className="mt-6 pt-6 border-t border-white/5 relative z-10">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Final Consensus</span>
-          <span className="font-display font-bold text-success flex items-center gap-1">
-            <CheckCircle2 className="w-4 h-4" /> 82% Agreement
+      <div className="mt-4 pt-4 border-t border-white/10 font-mono text-xs">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-muted-foreground uppercase text-[10px]">Calculated Agent Consensus</span>
+          <span className="font-bold text-success flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" /> {consensusText}
           </span>
         </div>
-        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-          <motion.div 
-            className="h-full bg-success rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: "82%" }}
-            transition={{ duration: 1, delay: 1.8 }}
-          />
+        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+          <div className="h-full bg-success rounded-full" style={{ width: `${agreementPct}%` }} />
         </div>
       </div>
     </div>
